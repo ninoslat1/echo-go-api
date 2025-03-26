@@ -1,20 +1,44 @@
 package services
 
 import (
+	"io"
 	"os"
 
-	logging "github.com/op/go-logging"
+	"github.com/natefinch/lumberjack"
+	"github.com/sirupsen/logrus"
 )
 
-var Log = logging.MustGetLogger("app")
+func InitLogger() *logrus.Logger {
+	log := logrus.New()
+	if _, err := os.Stat("log"); os.IsNotExist(err) {
+		err := os.Mkdir("log", 0755)
+		if err != nil {
+			log.Error("Failed to create log directory: ERROR" + err.Error())
+		} else {
+			log.Info("Log directory created")
+		}
+	}
 
-func InitLogger() {
-	var format = logging.MustStringFormatter(
-		`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
-	)
+	logSetup := &lumberjack.Logger{
+		Filename:   "log/app.log",
+		MaxSize:    10,
+		MaxBackups: 5,
+		MaxAge:     7,
+		Compress:   true,
+	}
 
-	backend := logging.NewLogBackend(os.Stdout, "", 0)
-	backendFormatter := logging.NewBackendFormatter(backend, format)
+	multiWriter := io.MultiWriter(os.Stdout, logSetup)
 
-	logging.SetBackend(backendFormatter)
+	log.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+		ForceColors:   true,
+	})
+
+	log.SetOutput(multiWriter)
+
+	log.SetLevel(logrus.InfoLevel)
+
+	log.Info("Logger initialized successfully")
+
+	return log
 }
