@@ -1,7 +1,6 @@
 package main
 
 import (
-	"echo-api/configs"
 	"echo-api/services"
 
 	"github.com/labstack/echo/v4"
@@ -12,8 +11,7 @@ func main() {
 
 	e := echo.New()
 
-	configs.RunDatabase(log)
-	services.SetupRoutes(e)
+	services.SetupRoutes(e, log)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }

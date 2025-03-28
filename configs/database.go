@@ -1,44 +1,48 @@
 package configs
 
 import (
+	// "fmt"
+
 	"echo-api/models"
-	"echo-api/services"
 	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
-	"gorm.io/driver/postgres"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-func RunDatabase(log *logrus.Logger) {
+func RunDatabase(log *logrus.Logger, dbName string) (*gorm.DB, error) {
 	err := godotenv.Load()
-
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Warn("Error loading .env file, using default environment variables")
 	}
 
 	cfg := &models.DBConfig{
 		Host:     os.Getenv("DB_HOST"),
 		User:     os.Getenv("DB_USER"),
 		Password: os.Getenv("DB_PASSWORD"),
-		Name:     os.Getenv("DB_NAME"),
 		Port:     os.Getenv("DB_PORT"),
-		SSLMode:  os.Getenv("DB_SSLMODE"),
 	}
-
-	services.InitDatabase(cfg, log)
 
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		cfg.Host, cfg.User, cfg.Password, cfg.Name, cfg.Port, cfg.SSLMode,
+		// ":cog938gb18@tcp(127.0.0.1:3306)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, dbName,
+		// dbName,
 	)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	// Open database connection
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Error("Failed to connect to database:", err)
+		return nil, err
 	}
 
-	services.MigrateDB(db, log)
+	log.Infof("Database '%s' connected successfully", dbName)
+	return db, nil
 }
